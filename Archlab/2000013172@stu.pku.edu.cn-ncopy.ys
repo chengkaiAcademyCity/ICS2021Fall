@@ -1,0 +1,190 @@
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len words to dst.
+# Return the number of positive words (>0) contained in src.
+#
+# Include your name and ID here:
+# Kai Cheng 2000013172
+# Describe how and why you modified the baseline code:
+# Replace some addq instructions with iaddq instruction, which can directly add the immediate numbers.
+# Use 10x Loop unrolling to accelerate.
+# Use Ternary tree to determine remaining numbers.
+# Insert properly to avoid Load-Use Hazard.
+##################################################################
+# Do not modify this portion
+# Function prologue.
+# %rdi = src, %rsi = dst, %rdx = len
+ncopy:
+
+##################################################################
+# You can modify this portion
+    iaddq $-10, %rdx # len < 10?
+	jl Root # If so, goto Root
+
+# Loop unrolling
+L1:	
+    mrmovq (%rdi), %r8	
+	mrmovq 8(%rdi), %r9	
+	rmmovq %r8, (%rsi)	
+	andq %r8, %r8 # val <= 0?
+	jle L2		
+	iaddq $1, %rax # count++	
+L2:	
+    mrmovq 16(%rdi), %r8	
+	rmmovq %r9, 8(%rsi)	
+	andq %r9, %r9		
+	jle L3		
+	iaddq $1, %rax		
+L3:	
+    mrmovq 24(%rdi), %r9	
+	rmmovq %r8, 16(%rsi)	
+	andq %r8, %r8		
+	jle L4		
+	iaddq $1, %rax		
+L4:	
+    mrmovq 32(%rdi), %r8	
+	rmmovq %r9, 24(%rsi)	
+	andq %r9, %r9		
+	jle L5		
+	iaddq $1, %rax		
+L5:	
+    mrmovq 40(%rdi), %r9	
+	rmmovq %r8, 32(%rsi)	
+	andq %r8, %r8		
+	jle L6		
+	iaddq $1, %rax		
+L6:	
+    mrmovq 48(%rdi), %r8	
+	rmmovq %r9, 40(%rsi)	
+	andq %r9, %r9		
+	jle L7		
+	iaddq $1, %rax		
+L7:	
+    mrmovq 56(%rdi), %r9	
+	rmmovq %r8, 48(%rsi)	
+	andq %r8, %r8		
+	jle L8		
+	iaddq $1, %rax		
+L8:	
+    mrmovq 64(%rdi), %r8	
+	rmmovq %r9, 56(%rsi)	
+	andq %r9, %r9		
+	jle L9		
+	iaddq $1, %rax		
+L9:	
+    mrmovq 72(%rdi), %r9	
+	rmmovq %r8, 64(%rsi)	
+	andq %r8, %r8		
+	jle L10		
+	iaddq $1, %rax		
+L10:	
+	rmmovq %r9, 72(%rsi)	
+	andq %r9, %r9		
+	jle Loop		
+	iaddq $1, %rax	
+
+Loop:
+    iaddq $80, %rdi # src++
+	iaddq $80, %rsi	
+	iaddq $-10, %rdx # len >= 10?
+	jge L1 # If so, goto L1
+
+# Ternary tree
+Root:
+	iaddq $7, %rdx # len <= 3
+	jl Tr1
+	jg Tr3	
+Tr2:
+    jmp Lea3 # len == 3
+Tr1:
+	iaddq $2, %rdx # len <= 1
+	je Lea1 # len == 1 Tr12
+    iaddq $-1,%rdx # len <= 2
+    je Lea2 # len == 2 Tr13
+	ret	# len == 0 Tr11
+Tr3:
+	iaddq $-3, %rdx # len <= 6 
+	jg Tr33
+	je Lea6 # len == 6 Tr32
+Tr31:
+	iaddq $1,%rdx # len <= 5
+	je Lea5	# len == 5 Tr312
+	jl Lea4 # len == 4 Tr311
+Tr33:
+	iaddq $-2,%rdx # len <= 8
+	je Lea8 # len == 8 Tr332
+	jl Lea7 # len == 7 Tr331
+
+# Tr333
+Lea9:
+	mrmovq 64(%rdi), %r9
+	rmmovq %r9, 64(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea8:
+	mrmovq 56(%rdi), %r9
+	jle Lea82 # Avoid Load-Use Hazard
+	iaddq $1, %rax
+Lea82:
+	rmmovq %r9, 56(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea7:
+	mrmovq 48(%rdi), %r9
+	jle Lea72
+	iaddq $1, %rax
+Lea72:
+	rmmovq %r9, 48(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea6:
+	mrmovq 40(%rdi), %r9
+	jle Lea62
+	iaddq $1, %rax
+Lea62:
+	rmmovq %r9, 40(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea5:
+	mrmovq 32(%rdi), %r9
+	jle Lea52
+	iaddq $1, %rax
+Lea52:	
+	rmmovq %r9, 32(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea4:
+	mrmovq 24(%rdi), %r9
+	jle Lea42
+	iaddq $1, %rax
+Lea42:
+	rmmovq %r9, 24(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea3:
+	mrmovq 16(%rdi), %r9
+	jle Lea32
+	iaddq $1, %rax
+Lea32:
+	rmmovq %r9, 16(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea2:
+	mrmovq 8(%rdi), %r9
+	jle Lea22
+	iaddq $1, %rax
+Lea22:
+	rmmovq %r9, 8(%rsi)
+	andq %r9, %r9	# val <= 0?
+Lea1:
+	mrmovq (%rdi), %r9
+	jle Lea12
+	iaddq $1, %rax
+Lea12:
+	rmmovq %r9, (%rsi)
+	andq %r9, %r9	# val <= 0?
+	jle Done
+	iaddq $1, %rax
+
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+    ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */
